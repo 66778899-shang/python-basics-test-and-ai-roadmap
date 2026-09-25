@@ -6,8 +6,12 @@
 卷三填空题、卷四代码阅读题、卷五编程题请对照《Python基础自测卷-答案解析.md》自行打分。
 
 用法：
-    python quiz.py
+    python quiz.py            # 按试卷原顺序作答
+    python quiz.py --shuffle  # 打乱题目与选项顺序（重测时推荐，避免靠记忆作答）
 """
+
+import random
+import sys
 
 # ---------------------------------------------------------------------------
 # 题库：与《Python基础自测卷》卷一、卷二完全一致
@@ -269,6 +273,23 @@ def parse_judge(raw):
     return None
 
 
+def build_quiz(shuffle=False):
+    """返回本次作答的题单；shuffle=True 时打乱题目顺序与单选选项顺序。"""
+    questions = []
+    for question in QUESTIONS:
+        item = dict(question)
+        if shuffle and item["type"] == "choice":
+            correct = CHOICE_KEYS[item["answer"]]
+            order = list(range(len(question["options"])))
+            random.shuffle(order)
+            item["options"] = [question["options"][i] for i in order]
+            item["answer"] = "ABCD"[order.index(correct)]
+        questions.append(item)
+    if shuffle:
+        random.shuffle(questions)
+    return questions
+
+
 def ask_one(index, question):
     """展示一道题并获取用户答案，返回 (用户答案, 是否放弃)。"""
     label = TYPE_NAME[question["type"]]
@@ -301,15 +322,19 @@ def grade(score, full_score):
 
 
 def main():
-    full_score = sum(POINTS[q["type"]] for q in QUESTIONS)
+    shuffle = "--shuffle" in sys.argv
+    questions = build_quiz(shuffle)
+    full_score = sum(POINTS[q["type"]] for q in questions)
     print("=" * 56)
     print("Python 基础自测 · 自动判分（卷一 + 卷二）")
-    print(f"共 {len(QUESTIONS)} 题，满分 {full_score} 分；填空题、代码阅读题、编程题请自行对照答案解析")
+    if shuffle:
+        print("（重测模式：题目与选项顺序已打乱）")
+    print(f"共 {len(questions)} 题，满分 {full_score} 分；填空题、代码阅读题、编程题请自行对照答案解析")
     print("=" * 56)
 
     score = 0
     records = []          # (题号, 题目, 你的答案, 正确答案, 解析, 是否答对, 是否放弃)
-    for index, question in enumerate(QUESTIONS, 1):
+    for index, question in enumerate(questions, 1):
         user_answer, gave_up = ask_one(index, question)
         correct = (not gave_up) and user_answer == question["answer"]
         if correct:
