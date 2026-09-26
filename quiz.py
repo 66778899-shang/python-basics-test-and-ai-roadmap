@@ -252,6 +252,10 @@ CHOICE_KEYS = {"A": 0, "B": 1, "C": 2, "D": 3}
 JUDGE_YES = {"对", "正确", "√", "y", "yes", "1", "true", "t"}
 JUDGE_NO = {"错", "错误", "×", "x", "no", "0", "false", "f"}
 
+# 有些题的选项内容本身就是 A/B/C/D（如"输出结果是？"），打乱后会与"选项标号 A/B/C/D"混淆，
+# 因此这类题只打乱题目顺序、不打乱选项顺序。
+LETTER_OPTIONS = {"A", "B", "C", "D", "AB", "CD"}
+
 
 def parse_choice(raw):
     """把用户输入解析成选项字母，无法识别时返回 None。"""
@@ -273,12 +277,17 @@ def parse_judge(raw):
     return None
 
 
+def has_letter_options(options):
+    """判断选项内容是否本身就是字母（这类题打乱选项会造成歧义）。"""
+    return any(opt.strip().upper() in LETTER_OPTIONS for opt in options)
+
+
 def build_quiz(shuffle=False):
     """返回本次作答的题单；shuffle=True 时打乱题目顺序与单选选项顺序。"""
     questions = []
     for question in QUESTIONS:
         item = dict(question)
-        if shuffle and item["type"] == "choice":
+        if shuffle and item["type"] == "choice" and not has_letter_options(question["options"]):
             correct = CHOICE_KEYS[item["answer"]]
             order = list(range(len(question["options"])))
             random.shuffle(order)
